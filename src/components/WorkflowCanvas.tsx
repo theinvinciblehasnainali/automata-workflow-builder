@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -10,7 +10,8 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   NodeChange,
-  EdgeChange
+  EdgeChange,
+  Connection
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import '@xyflow/react/dist/style.css';
@@ -33,6 +34,7 @@ interface WorkflowCanvasProps {
   testSequence: string;
   onTestSequenceChange: (val: string) => void;
   onExecute: () => void;
+  onConnectRequest?: (source: string, target: string) => void;
 }
 
 export default function WorkflowCanvas({
@@ -45,12 +47,19 @@ export default function WorkflowCanvas({
   onNodeDoubleClick,
   testSequence,
   onTestSequenceChange,
-  onExecute
+  onExecute,
+  onConnectRequest
 }: WorkflowCanvasProps) {
   const [showInfo, setShowInfo] = useState(false);
   const { theme, resolvedTheme } = useTheme();
   
   const isDark = resolvedTheme === 'dark' || theme === 'dark';
+
+  const onConnect = useCallback((params: Connection) => {
+    if (onConnectRequest && params.source && params.target) {
+      onConnectRequest(params.source, params.target);
+    }
+  }, [onConnectRequest]);
 
   // Convert custom edges to React Flow valid edges
   const flowEdges: Edge[] = edges.map(e => ({
@@ -95,6 +104,7 @@ export default function WorkflowCanvas({
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
+        onConnect={onConnect}
         colorMode={isDark ? 'dark' : 'light'}
         fitView
       >

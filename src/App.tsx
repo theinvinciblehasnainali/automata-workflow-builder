@@ -5,18 +5,17 @@ import {
   applyNodeChanges, 
   applyEdgeChanges,
   NodeChange,
-  EdgeChange,
-  Connection,
-  addEdge as reactFlowAddEdge
+  EdgeChange
 } from '@xyflow/react';
+import { Toaster, toast } from 'sonner';
 import WorkflowCanvas from './components/WorkflowCanvas';
 import ControlPanel from './components/ControlPanel';
 import MathInspector from './components/MathInspector';
 import TestSuiteTable, { CustomScenario } from './components/TestSuiteTable';
 import { ThemeToggle } from './components/ThemeToggle';
 import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType } from './types/automata';
-import { evaluateSequence } from './utils/automataEngine';
-import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus } from 'lucide-react';
+import { evaluateSequence, getNextDfaState } from './utils/automataEngine';
+import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2 } from 'lucide-react';
 
 // Initial nodes from requirements
 const initialNodes: WorkflowNode[] = [
@@ -78,6 +77,9 @@ export default function App() {
   
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+
+  const [pendingConnection, setPendingConnection] = useState<{source: string, target: string} | null>(null);
+  const [pendingEvent, setPendingEvent] = useState<string>('');
 
   const [simState, setSimState] = useState<SimulationState>({
     currentTestCaseId: null,
@@ -187,6 +189,15 @@ export default function App() {
     setEdges(prev => [...prev, { id, source, target, data: { triggerEvent: event } }]);
   };
 
+  const handleSaveConnection = () => {
+    if (pendingConnection && pendingEvent) {
+      handleAddEdge(pendingConnection.source, pendingConnection.target, pendingEvent);
+      toast.success(`Transition Linked: ${pendingConnection.source} -> ${pendingEvent} -> ${pendingConnection.target}`);
+      setPendingConnection(null);
+      setPendingEvent('');
+    }
+  };
+
   const handleRemoveEdge = (id: string) => {
     setEdges(prev => prev.filter(e => e.id !== id));
   };
@@ -253,20 +264,17 @@ export default function App() {
       const event = sequence[currentIndex];
       const prevState = currentStateString;
       
-      // Calculate next state purely mathematically using util
-      const { finalState } = evaluateSequence(nodes, edges, [event]);
-      // Actually evaluateSequence starts from beginning. So we use a manual step here relying on explicit rule logic
-      
-      let nextState = currentStateString;
-      const explicitEdge = freshEdges.find(e => e.source === prevState && e.data?.triggerEvent === event);
-      if (explicitEdge) {
-        nextState = explicitEdge.target;
-      } else {
-        const currentNodeObj = freshNodes.find(n => n.id === prevState);
-        if (currentNodeObj?.data.mathType !== 'accepting') {
-          const rejectingNode = freshNodes.find(n => n.data.mathType === 'rejecting');
-          if (rejectingNode) nextState = rejectingNode.id;
-        }
+      let nextState: string | null = null;
+      if (prevState !== null) {
+        nextState = getNextDfaState(freshNodes, freshEdges, prevState, event);
+      }
+
+      if (nextState === null) {
+        // Machine halts/rejects
+        clearInterval(simInterval.current!);
+        setSimState(prev => ({ ...prev, status: 'rejected' }));
+        setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, isActive: false } })));
+        return;
       }
 
       // Update UI glow states
@@ -337,7 +345,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col font-sans transition-colors duration-200">
-      
+      <Toaster position="bottom-right" richColors />
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between shadow-sm gap-4 transition-colors duration-200">
         
@@ -444,6 +452,10 @@ export default function App() {
             testSequence={testSequence}
             onTestSequenceChange={setTestSequence}
             onExecute={handleTestExecute}
+            onConnectRequest={(source, target) => {
+              setPendingConnection({ source, target });
+              setPendingEvent('');
+            }}
           />
           <TestSuiteTable 
             testCases={initialTestCases}
@@ -519,6 +531,72 @@ export default function App() {
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors"
                 >
                   Save & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Edge/Transition Modal */}
+      {pendingConnection && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
+              <Share2 className="text-emerald-500 w-4 h-4" /> Add Transition
+            </h3>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Source State (From)</label>
+                <select 
+                  value={pendingConnection.source}
+                  onChange={e => setPendingConnection({ ...pendingConnection, source: e.target.value })}
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-xs font-mono font-bold outline-none"
+                >
+                  {nodes.map(n => <option key={n.id} value={n.id}>{viewMode === 'math' ? n.data.mathState : n.data.label}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Target State (To)</label>
+                <select 
+                  value={pendingConnection.target}
+                  onChange={e => setPendingConnection({ ...pendingConnection, target: e.target.value })}
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-xs font-mono font-bold outline-none"
+                >
+                  {nodes.map(n => <option key={n.id} value={n.id}>{viewMode === 'math' ? n.data.mathState : n.data.label}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Trigger Event (Σ)</label>
+                <select 
+                  value={pendingEvent}
+                  onChange={e => setPendingEvent(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400 rounded-lg px-3 py-2 text-xs font-mono font-bold outline-none"
+                >
+                  <option value="">Select Trigger...</option>
+                  {alphabet.map(sym => <option key={sym} value={sym}>{sym}</option>)}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  onClick={() => {
+                    setPendingConnection(null);
+                    setPendingEvent('');
+                  }}
+                  className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSaveConnection}
+                  disabled={!pendingEvent}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Save Connection
                 </button>
               </div>
             </div>

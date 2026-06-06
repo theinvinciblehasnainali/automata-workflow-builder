@@ -7,7 +7,8 @@ import {
   Eye, 
   CheckCircle2, 
   AlertTriangle, 
-  HelpCircle
+  HelpCircle,
+  Plus
 } from 'lucide-react';
 
 export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; selected: boolean }) {
@@ -74,10 +75,24 @@ export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; 
 
   return (
     <div 
-      className={`relative flex flex-col w-[170px] min-h-[90px] rounded-xl p-3 ${borderClass} ${cardBg} ${shadowClass} ${ringClass} transition-all duration-200`}
+      className={`group relative flex flex-col w-[170px] min-h-[90px] rounded-xl p-3 ${borderClass} ${cardBg} ${shadowClass} ${ringClass} transition-all duration-200`}
     >
-      <Handle type="target" position={Position.Top} className="opacity-0 w-full h-2 rounded-none border-0" />
-      <Handle type="source" position={Position.Bottom} className="opacity-0 w-full h-2 rounded-none border-0" />
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        className="!w-6 !h-6 !bg-blue-600 text-white border-2 border-white dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity !-left-3 flex items-center justify-center rounded-full cursor-crosshair shadow-sm z-10"
+      >
+        <Plus size={14} />
+      </Handle>
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        className="!w-6 !h-6 !bg-blue-600 text-white border-2 border-white dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity !-right-3 flex items-center justify-center rounded-full cursor-crosshair shadow-sm z-10"
+      >
+        <Plus size={14} />
+      </Handle>
+      <Handle type="target" position={Position.Top} className="opacity-0 w-full h-2 rounded-none border-0 pt-0 mt-0 cursor-crosshair" />
+      <Handle type="source" position={Position.Bottom} className="opacity-0 w-full h-2 rounded-none border-0 pb-0 mb-0 cursor-crosshair" />
       
       <div className="flex justify-between items-start gap-1 mb-1">
         <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${badgeBg}`}>

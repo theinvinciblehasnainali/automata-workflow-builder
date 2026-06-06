@@ -1,8 +1,8 @@
 import { WorkflowNode, WorkflowEdge, EventType } from '../types/automata';
 
-export const getInitialStateId = (nodes: WorkflowNode[]): string => {
+export const getInitialStateId = (nodes: WorkflowNode[]): string | null => {
   const initialNode = nodes.find(n => n.data.mathType === 'initial');
-  return initialNode?.id || nodes[0]?.id || 'q0';
+  return initialNode?.id || nodes[0]?.id || null;
 };
 
 export const getNextDfaState = (
@@ -10,17 +10,7 @@ export const getNextDfaState = (
   edges: WorkflowEdge[],
   currentState: string,
   event: EventType
-): string => {
-  const currentNode = nodes.find(n => n.id === currentState);
-  
-  if (currentNode?.data.mathType === 'accepting') {
-    const explicitEdge = edges.find(
-      edge => edge.source === currentState && edge.data?.triggerEvent === event
-    );
-    if (explicitEdge) return explicitEdge.target;
-    return currentState;
-  }
-
+): string | null => {
   const matchingEdge = edges.find(
     edge => edge.source === currentState && edge.data?.triggerEvent === event
   );
@@ -29,27 +19,35 @@ export const getNextDfaState = (
     return matchingEdge.target;
   }
 
-  const rejectingNode = nodes.find(n => n.data.mathType === 'rejecting');
-  if (rejectingNode) {
-    return rejectingNode.id;
-  }
-
-  return currentState;
+  return null;
 };
 
 export const evaluateSequence = (
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   sequence: EventType[]
-): { finalState: string; isAccepted: boolean } => {
-  let currentState = getInitialStateId(nodes);
+): { finalState: string | null; isAccepted: boolean; pathTaken: string[] } => {
+  let currentState: string | null = getInitialStateId(nodes);
+  const pathTaken: string[] = [];
+  
+  if (currentState) {
+    pathTaken.push(currentState);
+  }
   
   for (const event of sequence) {
+    if (currentState === null) break; // Halt execution if we reach a failure state
     currentState = getNextDfaState(nodes, edges, currentState, event);
+    if (currentState) {
+      pathTaken.push(currentState);
+    }
+  }
+  
+  if (currentState === null) {
+    return { finalState: null, isAccepted: false, pathTaken };
   }
   
   const finalNode = nodes.find(n => n.id === currentState);
   const isAccepted = finalNode?.data.mathType === 'accepting';
   
-  return { finalState: currentState, isAccepted };
+  return { finalState: currentState, isAccepted, pathTaken };
 };

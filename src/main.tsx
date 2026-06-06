@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {/* @ts-expect-error next-themes type mismatch */}
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <App />
     </ThemeProvider>
