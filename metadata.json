@@ -1,0 +1,6 @@
+{
+  "name": "Workflow Automata Simulator",
+  "description": "An interactive workspace representing a business workflow canvas that doubles as a Finite State Machine simulator for academic computer science study.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
