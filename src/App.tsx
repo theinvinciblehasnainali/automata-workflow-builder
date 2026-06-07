@@ -344,13 +344,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col font-sans transition-colors duration-200">
       <Toaster position="bottom-right" richColors />
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between shadow-sm gap-4 transition-colors duration-200">
+      <header className="sticky top-0 z-30 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex flex-col lg:flex-row lg:items-center justify-between shadow-sm gap-4 transition-colors duration-200">
         
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg flex items-center justify-center shadow-sm">
+          <div className="h-9 w-9 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
             <Activity className="w-5 h-5" />
           </div>
           <div>
@@ -363,14 +363,14 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-col lg:flex-row w-full lg:w-auto items-start lg:items-center gap-4">
           
           {/* Multi-scenario dropdown selector */}
-          <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-700 pr-4">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center gap-2 lg:border-r border-slate-200 dark:border-slate-700 lg:pr-4">
             <select 
               value={currentScenarioId}
               onChange={handleSelectScenario}
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg px-3 py-2 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 shadow-sm"
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg px-3 py-2 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 shadow-sm"
             >
               <option value="default">Default: Academic Preset Model</option>
               {userCreatedCases.map(s => (
@@ -379,36 +379,38 @@ export default function App() {
             </select>
             <button
               onClick={handleCreateCustomScenario}
-              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
+              className="w-full sm:w-auto justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
             >
               <Plus size={14} /> Create Custom Scenario
             </button>
           </div>
 
-          <ThemeToggle />
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto items-start sm:items-center gap-4">
+            <ThemeToggle />
 
-          {/* High-contrast toggle */}
-          <div className="flex bg-slate-200/60 dark:bg-slate-800/60 p-1 rounded-lg border border-slate-300 dark:border-slate-700 shadow-inner">
-            <button
-              onClick={() => setViewMode('user')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
-                viewMode === 'user'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-400 dark:border-slate-600'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 duration-200'
-              }`}
-            >
-              <Layout size={14} /> User View
-            </button>
-            <button
-              onClick={() => setViewMode('math')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
-                viewMode === 'math'
-                  ? 'bg-slate-800 text-white shadow-sm border border-slate-900 dark:bg-slate-950 dark:border-slate-800'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 duration-200'
-              }`}
-            >
-              <Binary size={14} /> Automata Math Mode
-            </button>
+            {/* High-contrast toggle */}
+            <div className="flex w-full sm:w-auto bg-slate-200/60 dark:bg-slate-800/60 p-1 rounded-lg border border-slate-300 dark:border-slate-700 shadow-inner">
+              <button
+                onClick={() => setViewMode('user')}
+                className={`flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  viewMode === 'user'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-400 dark:border-slate-600'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 duration-200'
+                }`}
+              >
+                <Layout size={14} /> User View
+              </button>
+              <button
+                onClick={() => setViewMode('math')}
+                className={`flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  viewMode === 'math'
+                    ? 'bg-slate-800 text-white shadow-sm border border-slate-900 dark:bg-slate-950 dark:border-slate-800'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 duration-200'
+                }`}
+              >
+                <Binary size={14} /> Automata Math Mode
+              </button>
+            </div>
           </div>
 
         </div>
