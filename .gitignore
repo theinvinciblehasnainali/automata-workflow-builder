@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+# Exclude AI Studio configurations
+assets/.aistudio/
