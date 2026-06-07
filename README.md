@@ -28,7 +28,7 @@ Ensure you have [Node.js](https://nodejs.org/) installed.
 1. Clone the repository:
    ```bash
    git clone https://github.com/theinvinciblehasnainali/automata-workflow-builder.git
-   cd workflow-automata-builder
+   cd automata-workflow-builder
 
 2. Install dependencies:
    ```bash
