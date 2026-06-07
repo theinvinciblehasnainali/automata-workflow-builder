@@ -13,6 +13,7 @@ import ControlPanel from './components/ControlPanel';
 import MathInspector from './components/MathInspector';
 import TestSuiteTable, { CustomScenario } from './components/TestSuiteTable';
 import { ThemeToggle } from './components/ThemeToggle';
+import { saveToStorage, loadFromStorage } from './utils/storage';
 import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType } from './types/automata';
 import { evaluateSequence, getNextDfaState } from './utils/automataEngine';
 import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2 } from 'lucide-react';
@@ -66,15 +67,39 @@ const initialTestCases: TestCase[] = [
 
 export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('user');
-  const [currentScenarioId, setCurrentScenarioId] = useState<string>('default');
-  const [userCreatedCases, setUserCreatedCases] = useState<CustomScenario[]>([]);
 
-  const [nodes, setNodes] = useState<WorkflowNode[]>(initialNodes);
-  const [edges, setEdges] = useState<WorkflowEdge[]>(initialEdges);
-  const [alphabet, setAlphabet] = useState<EventType[]>(['user_signup', 'email_delivered', 'link_clicked', 'email_failed', 'timeout']);
+  // Load from local storage once at init
+  const savedState = loadFromStorage();
+
+  const [currentScenarioId, setCurrentScenarioId] = useState<string>(savedState?.currentScenarioId ?? 'default');
+  const [userCreatedCases, setUserCreatedCases] = useState<CustomScenario[]>(savedState?.userCreatedCases ?? []);
+
+  const [nodes, setNodes] = useState<WorkflowNode[]>(
+    savedState?.nodes && savedState.nodes.length > 0 ? savedState.nodes : initialNodes
+  );
+  const [edges, setEdges] = useState<WorkflowEdge[]>(savedState?.edges ?? initialEdges);
+  const [alphabet, setAlphabet] = useState<EventType[]>(
+    savedState?.alphabet && savedState.alphabet.length > 0
+      ? savedState.alphabet
+      : ['user_signup', 'email_delivered', 'link_clicked', 'email_failed', 'timeout']
+  );
   
-  const [testSequence, setTestSequence] = useState<string>('user_signup, email_delivered, link_clicked');
-  
+  const [testSequence, setTestSequence] = useState<string>(
+    savedState?.testSequence ?? 'user_signup, email_delivered, link_clicked'
+  );
+
+  // Auto-save any changes to local storage
+  useEffect(() => {
+    saveToStorage({
+      currentScenarioId,
+      userCreatedCases,
+      nodes,
+      edges,
+      alphabet,
+      testSequence
+    });
+  }, [currentScenarioId, userCreatedCases, nodes, edges, alphabet, testSequence]);
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
 
