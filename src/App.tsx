@@ -135,6 +135,15 @@ export default function App() {
     })));
   }, [viewMode]);
 
+  // Toast notification on simulation complete
+  useEffect(() => {
+    if (simState.status === 'accepted') {
+      toast.success('Sequence Accepted!');
+    } else if (simState.status === 'rejected') {
+      toast.error('Sequence Rejected!');
+    }
+  }, [simState.status]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as unknown as WorkflowNode[]),
     []
