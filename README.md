@@ -1,4 +1,4 @@
-# Workflow Automata Builder
+# Automata Workflow Builder
 
 An interactive, client-side web application built with React, Vite, and TypeScript that allows users to visually design, modify, and test workflow automata graphs.
 
