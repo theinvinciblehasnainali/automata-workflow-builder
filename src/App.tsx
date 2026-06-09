@@ -16,7 +16,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { saveToStorage, loadFromStorage } from './utils/storage';
 import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType } from './types/automata';
 import { evaluateSequence, getNextDfaState } from './utils/automataEngine';
-import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2 } from 'lucide-react';
+import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2, Trash2, Edit2 } from 'lucide-react';
 
 // Initial nodes from requirements
 const initialNodes: WorkflowNode[] = [
@@ -121,6 +121,10 @@ export default function App() {
     history: []
   });
 
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renameInputValue, setRenameInputValue] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const simInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Sync auto-save for custom scenarios
@@ -178,6 +182,56 @@ export default function App() {
     setAlphabet([]);
     setTestSequence('');
     setSimState(s => ({ ...s, status: 'idle' }));
+  };
+
+  const handleDeleteScenarioClick = () => {
+    if (currentScenarioId === 'default') {
+      toast.error('The default academic preset cannot be deleted.');
+      return;
+    }
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    setUserCreatedCases(prev => prev.filter(s => s.id !== currentScenarioId));
+    
+    // reset to default
+    setCurrentScenarioId('default');
+    setNodes(initialNodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
+    setEdges(initialEdges);
+    setAlphabet(['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']);
+    setTestSequence('connect, scan_clean, terminate');
+    setSimState(s => ({ ...s, status: 'idle' }));
+    toast.success('Scenario deleted.');
+    setIsDeleteModalOpen(false);
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleRenameScenarioClick = () => {
+    if (currentScenarioId === 'default') {
+      toast.error('The default academic preset cannot be renamed.');
+      return;
+    }
+    const scenario = userCreatedCases.find(s => s.id === currentScenarioId);
+    if (!scenario) return;
+
+    setRenameInputValue(scenario.name);
+    setIsRenameModalOpen(true);
+  };
+
+  const confirmRename = () => {
+    if (renameInputValue.trim() !== '') {
+      setUserCreatedCases(prev => prev.map(s => s.id === currentScenarioId ? { ...s, name: renameInputValue.trim() } : s));
+      toast.success('Scenario renamed.');
+    }
+    setIsRenameModalOpen(false);
+  };
+
+  const cancelRename = () => {
+    setIsRenameModalOpen(false);
   };
 
   const handleSelectScenario = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -422,6 +476,26 @@ export default function App() {
                 <option key={s.id} value={s.id}>{s.name} (Custom)</option>
               ))}
             </select>
+            
+            {currentScenarioId !== 'default' && (
+              <div className="flex gap-1">
+                <button
+                  onClick={handleRenameScenarioClick}
+                  title="Rename Scenario"
+                  className="p-2 justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg flex items-center transition-colors shadow-sm"
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button
+                  onClick={handleDeleteScenarioClick}
+                  title="Delete Scenario"
+                  className="p-2 justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg flex items-center transition-colors shadow-sm"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
+
             <button
               onClick={handleCreateCustomScenario}
               className="w-full sm:w-auto justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
@@ -518,6 +592,67 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* Rename Scenario Modal */}
+      {isRenameModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Rename Scenario</h2>
+            <input 
+              type="text"
+              value={renameInputValue}
+              onChange={e => setRenameInputValue(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-2 mb-6 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-inner"
+              placeholder="Scenario name..."
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmRename();
+                if (e.key === 'Escape') cancelRename();
+              }}
+            />
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={cancelRename}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmRename}
+                className="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Scenario Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Delete Scenario</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
+              Are you sure you want to delete this custom scenario? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={cancelDelete}
+                className="px-4 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+              >
+                No, keep it
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm"
+              >
+                Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Inline Modal for Node Editing */}
       {editingNodeId && (
