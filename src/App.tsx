@@ -22,47 +22,54 @@ import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Sha
 const initialNodes: WorkflowNode[] = [
   {
     id: 'q0', type: 'customNode', position: { x: 50, y: 150 },
-    data: { label: 'User Signed Up', mathState: 'q₀', type: 'trigger', mathType: 'initial', description: 'Starts the workflow when a user registers.', parameters: {}, viewMode: 'user' }
+    data: { label: 'IDLE / LISTENING', mathState: 'q₀', type: 'trigger', mathType: 'initial', description: 'Waiting for connection.', parameters: {}, viewMode: 'user' }
   },
   {
     id: 'q1', type: 'customNode', position: { x: 300, y: 100 },
-    data: { label: 'Send Welcome Email', mathState: 'q₁', type: 'action', mathType: 'normal', description: 'Dispatches the first onboarding email.', parameters: {}, viewMode: 'user' }
+    data: { label: 'TRUSTED_SESSION', mathState: 'q₁', type: 'action', mathType: 'normal', description: 'Active, clean data streaming.', parameters: {}, viewMode: 'user' }
   },
   {
     id: 'q2', type: 'customNode', position: { x: 550, y: 150 },
-    data: { label: 'Check Link Click', mathState: 'q₂', type: 'condition', mathType: 'normal', description: 'Checks if the user clicked the magic link.', parameters: {}, viewMode: 'user' }
+    data: { label: 'RISK_AUDIT', mathState: 'q₂', type: 'condition', mathType: 'normal', description: 'Suspicious anomaly or data leak detected.', parameters: {}, viewMode: 'user' }
   },
   {
     id: 'qacc', type: 'customNode', position: { x: 800, y: 50 },
-    data: { label: 'Account Verified', mathState: 'q_acc', type: 'accept', mathType: 'accepting', description: 'Success state workflow halts.', parameters: {}, viewMode: 'user' }
+    data: { label: 'SAFE_TERMINATED', mathState: 'q_acc', type: 'accept', mathType: 'accepting', description: 'Connection gracefully closed.', parameters: {}, viewMode: 'user' }
   },
   {
     id: 'qrej', type: 'customNode', position: { x: 800, y: 250 },
-    data: { label: 'Timeout Trap', mathState: 'q_rej', type: 'reject', mathType: 'rejecting', description: 'Failure state.', parameters: {}, viewMode: 'user' }
+    data: { label: 'BLOCKED_TRAFFIC', mathState: 'q_rej', type: 'reject', mathType: 'rejecting', description: 'Threat neutralized / Trap state.', parameters: {}, viewMode: 'user' }
   }
 ];
 
 // Initial edges matching DFA transitions
 const initialEdges: WorkflowEdge[] = [
-  { id: 'e-q0-q1', source: 'q0', target: 'q1', data: { triggerEvent: 'user_signup' } },
-  { id: 'e-q1-q2', source: 'q1', target: 'q2', data: { triggerEvent: 'email_delivered' } },
-  { id: 'e-q2-qacc', source: 'q2', target: 'qacc', data: { triggerEvent: 'link_clicked' } },
-  { id: 'e-q2-qrej', source: 'q2', target: 'qrej', data: { triggerEvent: 'timeout' } },
-  { id: 'e-q1-qrej', source: 'q1', target: 'qrej', data: { triggerEvent: 'email_failed' } },
-  { id: 'e-q0-qrej', source: 'q0', target: 'qrej', data: { triggerEvent: 'timeout' } }
+  { id: 'e-q0-q1', source: 'q0', target: 'q1', data: { triggerEvent: 'connect' } },
+  { id: 'e-q1-q1', source: 'q1', target: 'q1', data: { triggerEvent: 'scan_clean' } },
+  { id: 'e-q1-q2', source: 'q1', target: 'q2', data: { triggerEvent: 'scan_risk' } },
+  { id: 'e-q1-qacc', source: 'q1', target: 'qacc', data: { triggerEvent: 'terminate' } },
+  { id: 'e-q2-q2', source: 'q2', target: 'q2', data: { triggerEvent: 'scan_clean' } },
+  { id: 'e-q2-qrej1', source: 'q2', target: 'qrej', data: { triggerEvent: 'scan_risk' } },
+  { id: 'e-q2-q1', source: 'q2', target: 'q1', data: { triggerEvent: 'bypass_verify' } },
+  { id: 'e-q2-qrej2', source: 'q2', target: 'qrej', data: { triggerEvent: 'terminate' } },
+  { id: 'e-qrej-qrej1', source: 'qrej', target: 'qrej', data: { triggerEvent: 'connect' } },
+  { id: 'e-qrej-qrej2', source: 'qrej', target: 'qrej', data: { triggerEvent: 'scan_clean' } },
+  { id: 'e-qrej-qrej3', source: 'qrej', target: 'qrej', data: { triggerEvent: 'scan_risk' } },
+  { id: 'e-qrej-qrej4', source: 'qrej', target: 'qrej', data: { triggerEvent: 'bypass_verify' } },
+  { id: 'e-qrej-qrej5', source: 'qrej', target: 'qrej', data: { triggerEvent: 'terminate' } }
 ];
 
 const initialTestCases: TestCase[] = [
-  { id: 1, sequence: ['user_signup', 'email_delivered', 'link_clicked'], expected: 'ACCEPT', description: 'Standard successful execution.' },
-  { id: 2, sequence: ['user_signup', 'email_delivered', 'link_clicked', 'email_delivered'], expected: 'ACCEPT', description: 'DFA accepts since final state q_acc loops.' },
-  { id: 3, sequence: ['user_signup', 'email_delivered', 'link_clicked', 'timeout'], expected: 'ACCEPT', description: 'Accepting states persist.' },
-  { id: 4, sequence: ['user_signup', 'email_delivered', 'link_clicked', 'user_signup'], expected: 'ACCEPT', description: 'Persists through multi-session token checks.' },
-  { id: 5, sequence: ['user_signup', 'email_delivered', 'link_clicked', 'link_clicked'], expected: 'ACCEPT', description: 'Continuous clicking stays accepted.' },
-  { id: 6, sequence: ['user_signup'], expected: 'REJECT', description: 'Incomplete sequence.' },
-  { id: 7, sequence: ['user_signup', 'email_delivered'], expected: 'REJECT', description: 'Halted in q2.' },
-  { id: 8, sequence: ['user_signup', 'email_failed'], expected: 'REJECT', description: 'Bounces to trap.' },
-  { id: 9, sequence: ['user_signup', 'email_delivered', 'timeout'], expected: 'REJECT', description: 'Timeout occurs while waiting.' },
-  { id: 10, sequence: ['email_delivered', 'link_clicked'], expected: 'REJECT', description: 'Invalid start rejects.' }
+  { id: 1, sequence: ['connect', 'terminate'], expected: 'ACCEPT', description: 'Minimal valid connection.' },
+  { id: 2, sequence: ['connect', 'scan_clean', 'scan_clean', 'scan_clean', 'terminate'], expected: 'ACCEPT', description: 'Standard long-running data transmission.' },
+  { id: 3, sequence: ['connect', 'scan_risk', 'bypass_verify', 'terminate'], expected: 'ACCEPT', description: 'Suspicious flag raised but verified clean.' },
+  { id: 4, sequence: ['connect', 'scan_clean', 'scan_risk', 'scan_clean', 'bypass_verify', 'terminate'], expected: 'ACCEPT', description: 'Data processing continues under audit, then resolved.' },
+  { id: 5, sequence: ['connect', 'scan_risk', 'bypass_verify', 'scan_risk', 'bypass_verify', 'terminate'], expected: 'ACCEPT', description: 'Alternating threat alerts and clears.' },
+  { id: 6, sequence: ['scan_clean'], expected: 'REJECT', description: 'No active session handshake.' },
+  { id: 7, sequence: ['connect', 'scan_clean', 'scan_risk', 'scan_risk'], expected: 'REJECT', description: 'Double consecutive risk flags send to block.' },
+  { id: 8, sequence: ['connect', 'scan_risk', 'terminate'], expected: 'REJECT', description: 'Dropping connection mid-audit forces quarantine.' },
+  { id: 9, sequence: ['connect', 'scan_risk', 'scan_risk', 'bypass_verify'], expected: 'REJECT', description: 'Trap state ignores override keys.' },
+  { id: 10, sequence: ['connect', 'scan_clean'], expected: 'REJECT', description: 'Incomplete sequence, stream never terminated.' }
 ];
 
 export default function App() {
@@ -81,11 +88,11 @@ export default function App() {
   const [alphabet, setAlphabet] = useState<EventType[]>(
     savedState?.alphabet && savedState.alphabet.length > 0
       ? savedState.alphabet
-      : ['user_signup', 'email_delivered', 'link_clicked', 'email_failed', 'timeout']
+      : ['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']
   );
   
   const [testSequence, setTestSequence] = useState<string>(
-    savedState?.testSequence ?? 'user_signup, email_delivered, link_clicked'
+    savedState?.testSequence ?? 'connect, scan_clean, terminate'
   );
 
   // Auto-save any changes to local storage
@@ -161,15 +168,15 @@ export default function App() {
       name: `Custom Scenario ${userCreatedCases.length + 1}`,
       nodes: [],
       edges: [],
-      alphabet: ['custom_event'],
-      testSequence: 'custom_event'
+      alphabet: [],
+      testSequence: ''
     };
     setUserCreatedCases(prev => [...prev, newScenario]);
     setCurrentScenarioId(newId);
     setNodes([]);
     setEdges([]);
-    setAlphabet(['custom_event']);
-    setTestSequence('custom_event');
+    setAlphabet([]);
+    setTestSequence('');
     setSimState(s => ({ ...s, status: 'idle' }));
   };
 
@@ -179,8 +186,8 @@ export default function App() {
       setCurrentScenarioId('default');
       setNodes(initialNodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
       setEdges(initialEdges);
-      setAlphabet(['user_signup', 'email_delivered', 'link_clicked', 'email_failed', 'timeout']);
-      setTestSequence('user_signup, email_delivered, link_clicked');
+      setAlphabet(['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']);
+      setTestSequence('connect, scan_clean, terminate');
     } else {
       const scenario = userCreatedCases.find(s => s.id === id);
       if (scenario) {
@@ -265,7 +272,7 @@ export default function App() {
     
     const initialNode = freshNodes.find(n => n.data.mathType === 'initial') || freshNodes[0];
     if (!initialNode) {
-      alert("Please ensure at least one initial state exists.");
+      toast.error("Please ensure at least one initial state exists.");
       return;
     }
     
