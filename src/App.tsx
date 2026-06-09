@@ -244,7 +244,11 @@ export default function App() {
   };
 
   const handleAddNode = () => {
-    const newId = `q_${nodes.length + Date.now().toString().slice(-4)}`;
+    let nextIndex = 0;
+    while (nodes.some(n => n.id === `q_${nextIndex}` || n.id === `q${nextIndex}`)) {
+      nextIndex++;
+    }
+    const newId = `q_${nextIndex}`;
     const newNode: WorkflowNode = {
       id: newId,
       type: 'customNode',
