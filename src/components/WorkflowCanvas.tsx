@@ -35,6 +35,10 @@ interface WorkflowCanvasProps {
   onTestSequenceChange: (val: string) => void;
   onExecute: () => void;
   onConnectRequest?: (source: string, target: string) => void;
+  onEdgeDoubleClick?: (event: React.MouseEvent, edge: Edge) => void;
+  onNodeContextMenu?: (event: React.MouseEvent, node: Node) => void;
+  onEdgeContextMenu?: (event: React.MouseEvent, edge: Edge) => void;
+  onPaneClick?: (event: React.MouseEvent) => void;
 }
 
 export default function WorkflowCanvas({
@@ -48,7 +52,11 @@ export default function WorkflowCanvas({
   testSequence,
   onTestSequenceChange,
   onExecute,
-  onConnectRequest
+  onConnectRequest,
+  onEdgeDoubleClick,
+  onNodeContextMenu,
+  onEdgeContextMenu,
+  onPaneClick
 }: WorkflowCanvasProps) {
   const [showInfo, setShowInfo] = useState(false);
   const { theme, resolvedTheme } = useTheme();
@@ -68,6 +76,7 @@ export default function WorkflowCanvas({
     target: e.target,
     label: viewMode === 'math' ? `δ('${e.data?.triggerEvent}')` : e.data?.triggerEvent,
     animated: e.data?.isActive,
+    interactionWidth: 20,
     style: { 
       stroke: e.data?.isActive 
         ? (e.target.includes('acc') ? '#10b981' : e.target.includes('rej') ? '#f43f5e' : '#6366f1') 
@@ -104,6 +113,10 @@ export default function WorkflowCanvas({
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
+        onEdgeDoubleClick={onEdgeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneClick={onPaneClick}
         onConnect={onConnect}
         colorMode={isDark ? 'dark' : 'light'}
         fitView

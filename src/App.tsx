@@ -110,8 +110,10 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
 
-  const [pendingConnection, setPendingConnection] = useState<{source: string, target: string} | null>(null);
+  const [pendingConnection, setPendingConnection] = useState<{id?: string, source: string, target: string} | null>(null);
   const [pendingEvent, setPendingEvent] = useState<string>('');
+
+  const [contextMenu, setContextMenu] = useState<{type: 'node'|'edge', id: string, x: number, y: number} | null>(null);
 
   const [simState, setSimState] = useState<SimulationState>({
     currentTestCaseId: null,
@@ -164,6 +166,29 @@ export default function App() {
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds) as unknown as WorkflowEdge[]),
     []
   );
+
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    setContextMenu({ type: 'node', id: node.id, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    setContextMenu({ type: 'edge', id: edge.id, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleEdgeDoubleClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    const fullEdge = edges.find(e => e.id === edge.id);
+    if (fullEdge) {
+      setPendingConnection({ id: fullEdge.id, source: fullEdge.source, target: fullEdge.target });
+      setPendingEvent(fullEdge.data?.triggerEvent || '');
+    }
+  }, [edges]);
 
   const handleCreateCustomScenario = () => {
     const newId = `custom-${Date.now()}`;
@@ -286,8 +311,13 @@ export default function App() {
 
   const handleSaveConnection = () => {
     if (pendingConnection && pendingEvent) {
-      handleAddEdge(pendingConnection.source, pendingConnection.target, pendingEvent);
-      toast.success(`Transition Linked: ${pendingConnection.source} -> ${pendingEvent} -> ${pendingConnection.target}`);
+      if (pendingConnection.id) {
+        setEdges(prev => prev.map(e => e.id === pendingConnection.id ? { ...e, source: pendingConnection.source, target: pendingConnection.target, data: { triggerEvent: pendingEvent } } : e));
+        toast.success(`Transition Updated: ${pendingConnection.source} -> ${pendingEvent} -> ${pendingConnection.target}`);
+      } else {
+        handleAddEdge(pendingConnection.source, pendingConnection.target, pendingEvent);
+        toast.success(`Transition Linked: ${pendingConnection.source} -> ${pendingEvent} -> ${pendingConnection.target}`);
+      }
       setPendingConnection(null);
       setPendingEvent('');
     }
@@ -295,6 +325,50 @@ export default function App() {
 
   const handleRemoveEdge = (id: string) => {
     setEdges(prev => prev.filter(e => e.id !== id));
+  };
+
+  const handleDeleteNode = (id: string) => {
+    setNodes(prev => prev.filter(n => n.id !== id));
+    setEdges(prev => prev.filter(e => e.source !== id && e.target !== id));
+    toast.success('State deleted.');
+    if (editingNodeId === id) setEditingNodeId(null);
+    setContextMenu(null);
+  };
+
+  const handleDeleteEdge = (id: string) => {
+    setEdges(prev => prev.filter(e => e.id !== id));
+    toast.success('Transition deleted.');
+    setContextMenu(null);
+    if (pendingConnection?.id === id) {
+      setPendingConnection(null);
+      setPendingEvent('');
+    }
+  };
+
+  const handleContextMenuEdit = () => {
+    if (contextMenu) {
+      if (contextMenu.type === 'node') {
+        setEditingNodeId(contextMenu.id);
+      } else if (contextMenu.type === 'edge') {
+        const fullEdge = edges.find(e => e.id === contextMenu.id);
+        if (fullEdge) {
+          setPendingConnection({ id: fullEdge.id, source: fullEdge.source, target: fullEdge.target });
+          setPendingEvent(fullEdge.data?.triggerEvent || '');
+        }
+      }
+      closeContextMenu();
+    }
+  };
+
+  const handleContextMenuDelete = () => {
+    if (contextMenu) {
+      if (contextMenu.type === 'node') {
+        handleDeleteNode(contextMenu.id);
+      } else if (contextMenu.type === 'edge') {
+        handleDeleteEdge(contextMenu.id);
+      }
+      closeContextMenu();
+    }
   };
 
   const handleAddNode = () => {
@@ -570,6 +644,10 @@ export default function App() {
             onEdgesChange={onEdgesChange}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
+            onEdgeDoubleClick={handleEdgeDoubleClick}
+            onNodeContextMenu={handleNodeContextMenu}
+            onEdgeContextMenu={handleEdgeContextMenu}
+            onPaneClick={closeContextMenu}
             testSequence={testSequence}
             onTestSequenceChange={setTestSequence}
             onExecute={handleTestExecute}
@@ -709,6 +787,12 @@ export default function App() {
 
               <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button 
+                  onClick={() => handleDeleteNode(editingNodeId)}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 px-4 py-2 rounded-lg text-xs font-bold transition-colors mr-auto"
+                >
+                  Delete State
+                </button>
+                <button 
                   onClick={() => setEditingNodeId(null)}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors"
                 >
@@ -764,6 +848,14 @@ export default function App() {
               </div>
 
               <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                {pendingConnection.id && (
+                  <button 
+                    onClick={() => handleDeleteEdge(pendingConnection.id!)}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 px-4 py-2 rounded-lg text-xs font-bold transition-colors mr-auto"
+                  >
+                    Delete Transition
+                  </button>
+                )}
                 <button 
                   onClick={() => {
                     setPendingConnection(null);
@@ -783,6 +875,41 @@ export default function App() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Context Menu Overlay */}
+      {contextMenu && (
+        <div 
+          className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg py-1 w-48 text-sm"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button 
+            onClick={handleContextMenuEdit}
+            className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
+          >
+            <Edit2 size={14} /> Edit
+          </button>
+          <button 
+            onClick={handleContextMenuDelete}
+            className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+          {contextMenu.type === 'node' && (
+            <>
+              <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
+              <button 
+                onClick={() => {
+                  closeContextMenu();
+                  handleAddNode();
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
+              >
+                <Plus size={14} /> Add New State
+              </button>
+            </>
+          )}
         </div>
       )}
 
