@@ -16,7 +16,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { saveToStorage, loadFromStorage } from './utils/storage';
 import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType } from './types/automata';
 import { evaluateSequence, getNextDfaState } from './utils/automataEngine';
-import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2, Trash2, Edit2 } from 'lucide-react';
+import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2, Trash2, Edit2, RefreshCw } from 'lucide-react';
 
 // Initial nodes from requirements
 const initialNodes: WorkflowNode[] = [
@@ -113,7 +113,9 @@ export default function App() {
   const [pendingConnection, setPendingConnection] = useState<{id?: string, source: string, target: string} | null>(null);
   const [pendingEvent, setPendingEvent] = useState<string>('');
 
-  const [contextMenu, setContextMenu] = useState<{type: 'node'|'edge', id: string, x: number, y: number} | null>(null);
+  const [contextMenu, setContextMenu] = useState<{type: 'node'|'edge'|'canvas', id: string, x: number, y: number} | null>(null);
+  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const [addEventInputValue, setAddEventInputValue] = useState("");
 
   const [simState, setSimState] = useState<SimulationState>({
     currentTestCaseId: null,
@@ -175,6 +177,11 @@ export default function App() {
   const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
     setContextMenu({ type: 'edge', id: edge.id, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({ type: 'canvas', id: 'canvas', x: event.clientX, y: event.clientY });
   }, []);
 
   const closeContextMenu = useCallback(() => {
@@ -369,6 +376,36 @@ export default function App() {
       }
       closeContextMenu();
     }
+  };
+
+  const handleCanvasReset = () => {
+    if (currentScenarioId === 'default') return;
+    setNodes([]);
+    setEdges([]);
+    toast.success('Canvas reset.');
+  };
+
+  const handleGlobalReset = () => {
+    if (currentScenarioId === 'default') return;
+    setNodes([]);
+    setEdges([]);
+    setAlphabet([]);
+    setTestSequence('');
+    toast.success('System completely purged.');
+  };
+
+  const confirmAddEvent = () => {
+    if (addEventInputValue.trim() !== '') {
+      const trigger = addEventInputValue.trim();
+      if (!alphabet.includes(trigger)) {
+        setAlphabet(prev => [...prev, trigger]);
+        toast.success(`Event Trigger '${trigger}' added.`);
+      } else {
+        toast.error('Event Trigger already exists.');
+      }
+    }
+    setIsAddEventModalOpen(false);
+    setAddEventInputValue('');
   };
 
   const handleAddNode = () => {
@@ -570,6 +607,15 @@ export default function App() {
               </div>
             )}
 
+            {currentScenarioId !== 'default' && (
+              <button
+                onClick={handleGlobalReset}
+                className="w-full sm:w-auto justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
+              >
+                <RefreshCw size={14} /> Purge All
+              </button>
+            )}
+
             <button
               onClick={handleCreateCustomScenario}
               className="w-full sm:w-auto justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
@@ -647,6 +693,7 @@ export default function App() {
             onEdgeDoubleClick={handleEdgeDoubleClick}
             onNodeContextMenu={handleNodeContextMenu}
             onEdgeContextMenu={handleEdgeContextMenu}
+            onPaneContextMenu={handlePaneContextMenu}
             onPaneClick={closeContextMenu}
             testSequence={testSequence}
             onTestSequenceChange={setTestSequence}
@@ -726,6 +773,47 @@ export default function App() {
                 className="px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm"
               >
                 Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Event Modal */}
+      {isAddEventModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Add Event Trigger</h2>
+            <input 
+              type="text"
+              value={addEventInputValue}
+              onChange={e => setAddEventInputValue(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-2 mb-6 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-inner"
+              placeholder="e.g. on_click, on_hover"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmAddEvent();
+                if (e.key === 'Escape') {
+                  setIsAddEventModalOpen(false);
+                  setAddEventInputValue('');
+                }
+              }}
+            />
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                  setIsAddEventModalOpen(false);
+                  setAddEventInputValue('');
+                }}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmAddEvent}
+                className="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm"
+              >
+                OK
               </button>
             </div>
           </div>
@@ -884,18 +972,23 @@ export default function App() {
           className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg py-1 w-48 text-sm"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <button 
-            onClick={handleContextMenuEdit}
-            className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
-          >
-            <Edit2 size={14} /> Edit
-          </button>
-          <button 
-            onClick={handleContextMenuDelete}
-            className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors"
-          >
-            <Trash2 size={14} /> Delete
-          </button>
+          {contextMenu.type !== 'canvas' && (
+            <>
+              <button 
+                onClick={handleContextMenuEdit}
+                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
+              >
+                <Edit2 size={14} /> Edit
+              </button>
+              <button 
+                onClick={handleContextMenuDelete}
+                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            </>
+          )}
+
           {contextMenu.type === 'node' && (
             <>
               <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
@@ -907,6 +1000,40 @@ export default function App() {
                 className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
               >
                 <Plus size={14} /> Add New State
+              </button>
+            </>
+          )}
+
+          {contextMenu.type === 'canvas' && (
+            <>
+              <button 
+                onClick={() => {
+                  closeContextMenu();
+                  handleAddNode();
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
+              >
+                <Plus size={14} /> Add New State
+              </button>
+              <button 
+                onClick={() => {
+                  closeContextMenu();
+                  setIsAddEventModalOpen(true);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors"
+              >
+                <Plus size={14} /> Add Event Trigger
+              </button>
+              <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
+              <button 
+                onClick={() => {
+                  closeContextMenu();
+                  if (currentScenarioId !== 'default') handleCanvasReset();
+                }}
+                disabled={currentScenarioId === 'default'}
+                className={`w-full text-left px-4 py-2 flex items-center gap-2 transition-colors ${currentScenarioId === 'default' ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400'}`}
+              >
+                <RefreshCw size={14} /> Reset Canvas
               </button>
             </>
           )}

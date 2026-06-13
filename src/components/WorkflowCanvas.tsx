@@ -38,6 +38,7 @@ interface WorkflowCanvasProps {
   onEdgeDoubleClick?: (event: React.MouseEvent, edge: Edge) => void;
   onNodeContextMenu?: (event: React.MouseEvent, node: Node) => void;
   onEdgeContextMenu?: (event: React.MouseEvent, edge: Edge) => void;
+  onPaneContextMenu?: (event: React.MouseEvent) => void;
   onPaneClick?: (event: React.MouseEvent) => void;
 }
 
@@ -56,6 +57,7 @@ export default function WorkflowCanvas({
   onEdgeDoubleClick,
   onNodeContextMenu,
   onEdgeContextMenu,
+  onPaneContextMenu,
   onPaneClick
 }: WorkflowCanvasProps) {
   const [showInfo, setShowInfo] = useState(false);
@@ -116,6 +118,7 @@ export default function WorkflowCanvas({
         onEdgeDoubleClick={onEdgeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
+        onPaneContextMenu={onPaneContextMenu}
         onPaneClick={onPaneClick}
         onConnect={onConnect}
         colorMode={isDark ? 'dark' : 'light'}
