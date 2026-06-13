@@ -42,6 +42,12 @@ export interface TestCase {
   description: string;
 }
 
+export interface SavedTestSequence {
+  id: string;
+  name: string;
+  sequence: string;
+}
+
 export interface TransitionLog {
   step: number;
   fromNodeId: string;

@@ -1,10 +1,19 @@
-import { WorkflowNode, WorkflowEdge, EventType } from '../types/automata';
+import { WorkflowNode, WorkflowEdge, EventType, SavedTestSequence } from '../types/automata';
 import { CustomScenario } from '../components/TestSuiteTable';
 
 const STORAGE_KEY = 'automata_workflow_app_state_v1';
 
+export interface ScenarioState {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  alphabet: EventType[];
+  testSequence: string;
+  savedTestSequences: SavedTestSequence[];
+}
+
 export interface AppSavedState {
   currentScenarioId: string;
+  defaultScenarioState?: ScenarioState;
   userCreatedCases: CustomScenario[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
@@ -41,6 +50,7 @@ export function loadFromStorage(): AppSavedState | null {
     if (parsedState && typeof parsedState === 'object') {
       return {
         currentScenarioId: parsedState.currentScenarioId || 'default',
+        defaultScenarioState: parsedState.defaultScenarioState,
         userCreatedCases: Array.isArray(parsedState.userCreatedCases) ? parsedState.userCreatedCases : [],
         nodes: Array.isArray(parsedState.nodes) ? parsedState.nodes : [],
         edges: Array.isArray(parsedState.edges) ? parsedState.edges : [],

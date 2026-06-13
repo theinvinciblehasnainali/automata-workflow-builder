@@ -14,7 +14,7 @@ import MathInspector from './components/MathInspector';
 import TestSuiteTable, { CustomScenario } from './components/TestSuiteTable';
 import { ThemeToggle } from './components/ThemeToggle';
 import { saveToStorage, loadFromStorage } from './utils/storage';
-import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType } from './types/automata';
+import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType, SavedTestSequence } from './types/automata';
 import { evaluateSequence, getNextDfaState } from './utils/automataEngine';
 import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2, Trash2, Edit2, RefreshCw } from 'lucide-react';
 
@@ -80,32 +80,42 @@ export default function App() {
 
   const [currentScenarioId, setCurrentScenarioId] = useState<string>(savedState?.currentScenarioId ?? 'default');
   const [userCreatedCases, setUserCreatedCases] = useState<CustomScenario[]>(savedState?.userCreatedCases ?? []);
-
-  const [nodes, setNodes] = useState<WorkflowNode[]>(
-    savedState?.nodes && savedState.nodes.length > 0 ? savedState.nodes : initialNodes
-  );
-  const [edges, setEdges] = useState<WorkflowEdge[]>(savedState?.edges ?? initialEdges);
-  const [alphabet, setAlphabet] = useState<EventType[]>(
-    savedState?.alphabet && savedState.alphabet.length > 0
-      ? savedState.alphabet
-      : ['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']
-  );
   
-  const [testSequence, setTestSequence] = useState<string>(
-    savedState?.testSequence ?? 'connect, scan_clean, terminate'
-  );
+  const [defaultScenarioState, setDefaultScenarioState] = useState(savedState?.defaultScenarioState || {
+    nodes: initialNodes,
+    edges: initialEdges,
+    alphabet: ['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate'],
+    testSequence: 'connect, scan_clean, terminate',
+    savedTestSequences: []
+  });
+
+  const getInitialState = (scenarioId: string) => {
+    if (scenarioId === 'default') return defaultScenarioState;
+    const scenario = (savedState?.userCreatedCases || []).find((s: CustomScenario) => s.id === scenarioId);
+    if (scenario) return scenario;
+    return defaultScenarioState;
+  };
+
+  const initialCurrentState = getInitialState(savedState?.currentScenarioId ?? 'default');
+
+  const [nodes, setNodes] = useState<WorkflowNode[]>(initialCurrentState.nodes);
+  const [edges, setEdges] = useState<WorkflowEdge[]>(initialCurrentState.edges);
+  const [alphabet, setAlphabet] = useState<EventType[]>(initialCurrentState.alphabet);
+  const [testSequence, setTestSequence] = useState<string>(initialCurrentState.testSequence);
+  const [savedTestSequences, setSavedTestSequences] = useState<SavedTestSequence[]>(initialCurrentState.savedTestSequences || []);
 
   // Auto-save any changes to local storage
   useEffect(() => {
     saveToStorage({
       currentScenarioId,
+      defaultScenarioState,
       userCreatedCases,
       nodes,
       edges,
       alphabet,
       testSequence
     });
-  }, [currentScenarioId, userCreatedCases, nodes, edges, alphabet, testSequence]);
+  }, [currentScenarioId, defaultScenarioState, userCreatedCases, nodes, edges, alphabet, testSequence]);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -131,16 +141,18 @@ export default function App() {
 
   const simInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync auto-save for custom scenarios
+  // Sync auto-save for scenarios
   useEffect(() => {
-    if (currentScenarioId !== 'default') {
+    if (currentScenarioId === 'default') {
+      setDefaultScenarioState({ nodes, edges, alphabet, testSequence, savedTestSequences });
+    } else {
       setUserCreatedCases(prev => prev.map(s => 
         s.id === currentScenarioId 
-          ? { ...s, nodes, edges, alphabet, testSequence } 
+          ? { ...s, nodes, edges, alphabet, testSequence, savedTestSequences } 
           : s
       ));
     }
-  }, [nodes, edges, alphabet, testSequence, currentScenarioId]);
+  }, [nodes, edges, alphabet, testSequence, savedTestSequences, currentScenarioId]);
 
   // Sync viewMode to node data so custom nodes re-render correctly
   useEffect(() => {
@@ -205,7 +217,8 @@ export default function App() {
       nodes: [],
       edges: [],
       alphabet: [],
-      testSequence: ''
+      testSequence: '',
+      savedTestSequences: []
     };
     setUserCreatedCases(prev => [...prev, newScenario]);
     setCurrentScenarioId(newId);
@@ -213,6 +226,7 @@ export default function App() {
     setEdges([]);
     setAlphabet([]);
     setTestSequence('');
+    setSavedTestSequences([]);
     setSimState(s => ({ ...s, status: 'idle' }));
   };
 
@@ -229,10 +243,11 @@ export default function App() {
     
     // reset to default
     setCurrentScenarioId('default');
-    setNodes(initialNodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
-    setEdges(initialEdges);
-    setAlphabet(['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']);
-    setTestSequence('connect, scan_clean, terminate');
+    setNodes(defaultScenarioState.nodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
+    setEdges(defaultScenarioState.edges);
+    setAlphabet(defaultScenarioState.alphabet);
+    setTestSequence(defaultScenarioState.testSequence);
+    setSavedTestSequences(defaultScenarioState.savedTestSequences || []);
     setSimState(s => ({ ...s, status: 'idle' }));
     toast.success('Scenario deleted.');
     setIsDeleteModalOpen(false);
@@ -270,10 +285,11 @@ export default function App() {
     const id = e.target.value;
     if (id === 'default') {
       setCurrentScenarioId('default');
-      setNodes(initialNodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
-      setEdges(initialEdges);
-      setAlphabet(['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']);
-      setTestSequence('connect, scan_clean, terminate');
+      setNodes(defaultScenarioState.nodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
+      setEdges(defaultScenarioState.edges);
+      setAlphabet(defaultScenarioState.alphabet);
+      setTestSequence(defaultScenarioState.testSequence);
+      setSavedTestSequences(defaultScenarioState.savedTestSequences || []);
     } else {
       const scenario = userCreatedCases.find(s => s.id === id);
       if (scenario) {
@@ -282,6 +298,7 @@ export default function App() {
         setEdges(scenario.edges);
         setAlphabet(scenario.alphabet);
         setTestSequence(scenario.testSequence);
+        setSavedTestSequences(scenario.savedTestSequences || []);
       }
     }
     setSimState(s => ({ ...s, status: 'idle' }));
@@ -391,7 +408,18 @@ export default function App() {
     setEdges([]);
     setAlphabet([]);
     setTestSequence('');
+    setSavedTestSequences([]);
     toast.success('System completely purged.');
+  };
+
+  const handleRestoreDefaults = () => {
+    if (currentScenarioId !== 'default') return;
+    setNodes(initialNodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
+    setEdges(initialEdges);
+    setAlphabet(['connect', 'scan_clean', 'scan_risk', 'bypass_verify', 'terminate']);
+    setTestSequence('connect, scan_clean, terminate');
+    setSavedTestSequences([]);
+    toast.success('Academic defaults restored.');
   };
 
   const confirmAddEvent = () => {
@@ -524,33 +552,24 @@ export default function App() {
     }
   };
 
-  const handleRunCustomScenario = (id: string) => {
-    // If it's already active scenario just run
-    let targetNodes = nodes;
-    let targetEdges = edges;
-    let sequence = '';
-    
-    if (id !== currentScenarioId) {
-      const scenario = userCreatedCases.find(s => s.id === id);
-      if (scenario) {
-        setCurrentScenarioId(id);
-        setNodes(scenario.nodes.map(n => ({ ...n, data: { ...n.data, viewMode } })));
-        setEdges(scenario.edges);
-        setAlphabet(scenario.alphabet);
-        setTestSequence(scenario.testSequence);
-        targetNodes = scenario.nodes;
-        targetEdges = scenario.edges;
-        sequence = scenario.testSequence;
-      }
-    } else {
-      sequence = testSequence;
+  const handleRunSavedSequence = (id: string) => {
+    const seq = savedTestSequences.find(s => s.id === id);
+    if (seq) {
+      setTestSequence(seq.sequence);
+      const seqArr = seq.sequence.split(',').map(s => s.trim()).filter(Boolean);
+      executeSequence(seqArr, id, nodes, edges);
     }
+  };
 
-    const seqArr = sequence.split(',').map(s => s.trim()).filter(Boolean);
-    // ensure state updates before execution
-    setTimeout(() => {
-      executeSequence(seqArr, id, targetNodes, targetEdges);
-    }, 50);
+  const handleSaveSequence = (name: string, sequence: string) => {
+    const newSeq = { id: `seq-${Date.now()}`, name, sequence };
+    setSavedTestSequences(prev => [...prev, newSeq]);
+    toast.success(`Sequence '${name}' saved.`);
+  };
+
+  const handleDeleteSequence = (id: string) => {
+    setSavedTestSequences(prev => prev.filter(s => s.id !== id));
+    toast.success('Sequence deleted.');
   };
 
   return (
@@ -613,6 +632,15 @@ export default function App() {
                 className="w-full sm:w-auto justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
               >
                 <RefreshCw size={14} /> Purge All
+              </button>
+            )}
+            
+            {currentScenarioId === 'default' && (
+              <button
+                onClick={handleRestoreDefaults}
+                className="w-full sm:w-auto justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-500 text-xs font-bold rounded-lg px-3 py-2 flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap"
+              >
+                <RefreshCw size={14} /> Restore Defaults
               </button>
             )}
 
@@ -704,15 +732,18 @@ export default function App() {
             }}
           />
           <TestSuiteTable 
+            currentScenarioId={currentScenarioId}
             testCases={initialTestCases}
-            userCreatedCases={userCreatedCases}
+            savedTestSequences={savedTestSequences}
             alphabet={alphabet}
             nodes={nodes}
             edges={edges}
             currentSimulationId={simState.currentTestCaseId}
             status={simState.status}
             onRunTest={handleRunTestCase}
-            onRunCustomScenario={handleRunCustomScenario}
+            onRunSavedSequence={handleRunSavedSequence}
+            onSaveSequence={handleSaveSequence}
+            onDeleteSequence={handleDeleteSequence}
           />
         </div>
 
