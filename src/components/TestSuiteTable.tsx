@@ -44,6 +44,8 @@ export default function TestSuiteTable({
 }: TestSuiteTableProps) {
   const [customInput, setCustomInput] = useState('');
   const [liveStatus, setLiveStatus] = useState<'IDLE' | 'ACCEPTED' | 'REJECTED'>('IDLE');
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveSequenceName, setSaveSequenceName] = useState('');
 
   const handleLiveEvaluate = () => {
     const seqArr = customInput.split(',').map(s => s.trim()).filter(Boolean);
@@ -185,8 +187,8 @@ export default function TestSuiteTable({
                         <button
                           onClick={() => {
                             if (customInput.trim() !== '') {
-                              const name = prompt('Enter a name for this custom test sequence:');
-                              if (name) onSaveSequence(name, customInput.trim());
+                              setSaveSequenceName('');
+                              setIsSaveModalOpen(true);
                             }
                           }}
                           disabled={!customInput.trim()}
@@ -266,6 +268,65 @@ export default function TestSuiteTable({
           </div>
         </div>
       </details>
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95 text-left">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+              Save Custom Test Sequence
+            </h3>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Sequence Name</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Happy Path, Edge Case 1"
+                  value={saveSequenceName}
+                  onChange={e => setSaveSequenceName(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-xs font-medium focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none w-full"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && saveSequenceName.trim()) {
+                      onSaveSequence(saveSequenceName.trim(), customInput.trim());
+                      setIsSaveModalOpen(false);
+                    } else if (e.key === 'Escape') {
+                      setIsSaveModalOpen(false);
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Sequence Data</label>
+                <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg px-3 py-2 text-xs font-mono select-all overflow-x-auto max-w-full">
+                  {customInput.trim()}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  onClick={() => setIsSaveModalOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    if (saveSequenceName.trim()) {
+                      onSaveSequence(saveSequenceName.trim(), customInput.trim());
+                      setIsSaveModalOpen(false);
+                    }
+                  }}
+                  disabled={!saveSequenceName.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Save Sequence
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
