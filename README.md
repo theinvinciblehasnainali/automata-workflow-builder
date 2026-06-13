@@ -8,16 +8,20 @@ An interactive, client-side web application built with React, Vite, and TypeScri
 * **Input Testing/Inspection:** Built-in validation structures (`MathInspector`, `TestSuiteTable`) to evaluate string inputs against the designed automata.
 * **Strict Type Safety:** Fully typed architectural layer managing automata definitions cleanly.
 
-## 🛠️ Tech Stack
-* **Frontend Framework:** React 18+ (with TypeScript)
-* **Build Tool:** Vite (Optimized for ultra-fast production bundling)
-* **Styling:** CSS / Tailwind CSS
-* **Deployment:** Vercel
+## � Complete Project Documentation
+To ensure a highly professional approach, comprehensive standard documentation has been created in the `/docs` directory. These files serve as the benchmark for system reporting, architecture tracking, and computation mapping:
 
-## 📦 Project Structure Overview
-* `src/components/`: Modular UI elements split into canvas controls and inspection tables.
-* `src/types/`: Centralized TypeScript interfaces managing the state machine structure (`automata.ts`).
-* `src/utils/`: Pure helper functions for tracking graph errors and structural rules.
+1. [**Overview & Scope (`01_OVERVIEW.md`)**](./docs/01_OVERVIEW.md) - Project objectives, features, demographics, and capabilities.
+2. [**Automata Theory Engine (`02_AUTOMATA_THEORY.md`)**](./docs/02_AUTOMATA_THEORY.md) - Detailed breakdown mapping Discrete Mathematics logic equations to the structural limits of the system implementation.
+3. [**System Architecture (`03_SYSTEM_ARCHITECTURE.md`)**](./docs/03_SYSTEM_ARCHITECTURE.md) - Deep dive covering technology stack, State Management lifecycles over Redux patterns, and visual components mapping.
+4. [**User Guide (`04_USER_GUIDE.md`)**](./docs/04_USER_GUIDE.md) - Comprehensive step-by-step user-manual operations mapping canvas capabilities, test running formats, node configuration triggers, and Scenario manipulation hooks.
+
+## 🛠️ Tech Stack
+* **Frontend Framework:** React 19 (TypeScript)
+* **Build Tool:** Vite 6
+* **Canvas Engine:** `@xyflow/react` v12
+* **Styling/Animations:** TailwindCSS v4, Sonner, motion
+* **Asset Library:** Lucide React
 
 ## ⚙️ Getting Started
 
@@ -29,38 +33,19 @@ Ensure you have [Node.js](https://nodejs.org/) installed.
    ```bash
    git clone https://github.com/theinvinciblehasnainali/automata-workflow-builder.git
    cd automata-workflow-builder
-
+   ```
 2. Install dependencies:
    ```bash
    npm install
-
+   ```
 3. Run the development server:
    ```bash
    npm run dev
-
+   ```
 4. Build for production:
    ```bash
    npm run build
-
-## 🔬 Connection to Automata Theory
-This application serves as a visual bridge between abstract computational theory and practical software implementation. The architecture mirrors the formal definition of a **Finite Automaton 5-tuple (Q, Σ, δ, q₀, F):**
-
-### States (Q):
-Represented visually as nodes on the canvas canvas workspace.
-
-### Alphabet (Σ):
-The restricted input character set defined by the user to evaluate edge triggers.
-
-### Transition Function (δ):
-Implemented via directed interactive edges connecting the node blocks. The underlying automataEngine.ts processes inputs sequentially across these paths.
-
-### Initial State (q₀):
-Designated via the control panel interface to establish the computation's entry point.
-
-### Accepting States (F):
-Highlighted visually as final/target states to signify successful string recognition upon input consumption.
-
-The system dynamically processes arbitrary input strings to verify whether they are formally accepted or rejected by the configured machine layout, exposing the step-by-step state transition pipeline.
+   ```
 
 ## ✍️ Credits
 **Developer:** Hasnain Ali
