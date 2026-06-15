@@ -16,6 +16,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { saveToStorage, loadFromStorage } from './utils/storage';
 import { WorkflowNode, WorkflowEdge, ViewMode, SimulationState, TestCase, EventType, SavedTestSequence } from './types/automata';
 import { evaluateSequence, getNextDfaState } from './utils/automataEngine';
+import { reToDfa } from './utils/reToDfa';
 import { Layout, Binary, Activity, Code2, AlertTriangle, CheckCircle2, Plus, Share2, Trash2, Edit2, RefreshCw } from 'lucide-react';
 
 // Initial nodes from requirements
@@ -138,6 +139,10 @@ export default function App() {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renameInputValue, setRenameInputValue] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // RE → DFA confirmation modal
+  const [pendingReString, setPendingReString] = useState<string | null>(null);
+  const [reGenerateError, setReGenerateError] = useState<string | null>(null);
 
   const simInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -422,6 +427,32 @@ export default function App() {
     toast.success('Academic defaults restored.');
   };
 
+  // RE → DFA: open confirmation modal
+  const handleGenerateDfaRequest = (re: string) => {
+    setReGenerateError(null);
+    setPendingReString(re);
+  };
+
+  // RE → DFA: user confirmed — compile and replace canvas
+  const handleConfirmGenerate = () => {
+    if (!pendingReString) return;
+    const result = reToDfa(pendingReString, alphabet);
+    if (result.error) {
+      setReGenerateError(result.error);
+      // Keep modal open so user can read the error
+      return;
+    }
+    // Apply viewMode to generated nodes
+    const nodesWithMode = result.nodes.map(n => ({ ...n, data: { ...n.data, viewMode } }));
+    setNodes(nodesWithMode);
+    setEdges(result.edges);
+    setTestSequence('');
+    setSavedTestSequences([]);
+    setPendingReString(null);
+    setReGenerateError(null);
+    toast.success(`${viewMode === 'math' ? 'DFA' : 'Workflow'} generated successfully — ${result.nodes.length} states, ${result.edges.length} transitions.`);
+  };
+
   const confirmAddEvent = () => {
     if (addEventInputValue.trim() !== '') {
       const trigger = addEventInputValue.trim();
@@ -696,6 +727,7 @@ export default function App() {
             onRemoveAlphabetTrigger={handleRemoveAlphabetTrigger}
             onAddEdge={handleAddEdge}
             onAddNode={handleAddNode}
+            onGenerateDfaRequest={handleGenerateDfaRequest}
           />
           <MathInspector 
             nodes={nodes}
@@ -748,6 +780,62 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* RE → DFA Confirmation Modal */}
+      {pendingReString !== null && (
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Replace Canvas?</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {viewMode === 'math' ? 'Generate DFA' : 'Generate Workflow'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
+              This will <span className="font-semibold text-slate-800 dark:text-slate-200">clear all current states and transitions</span> and replace them with a machine generated from:
+            </p>
+
+            {/* RE preview */}
+            <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-lg px-3 py-2 font-mono text-sm text-violet-800 dark:text-violet-300 text-center mb-4 break-all">
+              {pendingReString}
+            </div>
+
+            {/* Inline compilation error (shown if generation fails) */}
+            {reGenerateError && (
+              <div className="flex items-start gap-1.5 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2 mb-4">
+                <AlertTriangle size={12} className="text-rose-500 mt-0.5 shrink-0" />
+                <span className="text-[10px] text-rose-700 dark:text-rose-400 font-medium">{reGenerateError}</span>
+              </div>
+            )}
+
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-5 italic">
+              This action cannot be undone. Saved test sequences will also be cleared.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => { setPendingReString(null); setReGenerateError(null); }}
+                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmGenerate}
+                className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                Proceed &amp; {viewMode === 'math' ? 'Generate DFA' : 'Generate Workflow'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Rename Scenario Modal */}
       {isRenameModalOpen && (

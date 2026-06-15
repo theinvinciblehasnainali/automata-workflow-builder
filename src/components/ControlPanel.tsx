@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WorkflowNode, EventType, ViewMode } from '../types/automata';
-import { Binary, Share2, Plus, Zap, Layers } from 'lucide-react';
+import { Binary, Share2, Plus, Zap, Layers, Regex, AlertCircle, Sparkles } from 'lucide-react';
 
 interface ControlPanelProps {
   alphabet: EventType[];
@@ -10,6 +10,7 @@ interface ControlPanelProps {
   onRemoveAlphabetTrigger: (trigger: string) => void;
   onAddEdge: (source: string, target: string, event: string) => void;
   onAddNode: () => void;
+  onGenerateDfaRequest: (re: string) => void;
 }
 
 export default function ControlPanel({
@@ -19,12 +20,15 @@ export default function ControlPanel({
   onAddAlphabetTrigger,
   onRemoveAlphabetTrigger,
   onAddEdge,
-  onAddNode
+  onAddNode,
+  onGenerateDfaRequest,
 }: ControlPanelProps) {
   const [newTrigger, setNewTrigger] = useState('');
   const [edgeSource, setEdgeSource] = useState('');
   const [edgeTarget, setEdgeTarget] = useState('');
   const [edgeEvent, setEdgeEvent] = useState('');
+  const [reInput, setReInput] = useState('');
+  const [reError, setReError] = useState<string | null>(null);
 
   const handleAddTrigger = () => {
     if (newTrigger.trim() && !alphabet.includes(newTrigger.trim())) {
@@ -95,6 +99,66 @@ export default function ControlPanel({
             </span>
           ))}
           {alphabet.length === 0 && <span className="text-[10px] text-slate-400 dark:text-slate-500 italic">No triggers registered.</span>}
+        </div>
+      </div>
+
+      {/* Regular Expressions Card */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col gap-3 transition-colors duration-200">
+        <div>
+          <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase flex items-center gap-1.5 whitespace-nowrap">
+            <Regex className="text-violet-600 dark:text-violet-400 w-4 h-4" /> Regular Expressions
+          </h4>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Create automated workflows based on regular expressions.</p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={alphabet.length === 0 ? 'Add Event Triggers first…' : 'e.g. (a+b)*abb  or  (a|b)*abb'}
+              value={reInput}
+              disabled={alphabet.length === 0}
+              onChange={e => { setReInput(e.target.value); setReError(null); }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && reInput.trim() && alphabet.length > 0) {
+                  onGenerateDfaRequest(reInput.trim());
+                }
+              }}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 focus:bg-white dark:focus:bg-slate-900 focus:border-violet-500 dark:focus:border-violet-400 focus:ring-1 focus:ring-violet-100 dark:focus:ring-violet-900/50 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          {/* Alphabet hint */}
+          {alphabet.length > 0 && (
+            <div className="flex flex-wrap gap-1 px-0.5">
+              <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wide mr-1 self-center">Σ:</span>
+              {alphabet.map(sym => (
+                <span key={sym} className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800">{sym}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Inline error */}
+          {reError && (
+            <div className="flex items-start gap-1.5 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg px-2.5 py-2">
+              <AlertCircle size={12} className="text-rose-500 mt-0.5 shrink-0" />
+              <span className="text-[10px] text-rose-700 dark:text-rose-400 font-medium">{reError}</span>
+            </div>
+          )}
+
+          <button
+            disabled={!reInput.trim() || alphabet.length === 0}
+            onClick={() => {
+              if (reInput.trim()) {
+                setReError(null);
+                onGenerateDfaRequest(reInput.trim());
+              }
+            }}
+            className="w-full mt-0.5 flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white font-bold text-xs py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            <Sparkles size={13} />
+            {viewMode === 'math' ? 'Generate DFA' : 'Generate Workflow'}
+          </button>
         </div>
       </div>
 
