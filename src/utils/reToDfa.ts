@@ -303,6 +303,130 @@ function subsetConstruct(nfa: NFA, alphabet: string[]): { states: DFAState[]; st
 }
 
 // =============================================================================
+// STEP 6.5 — MINIMISATION (Hopcroft's Algorithm)
+// =============================================================================
+
+function minimizeDFA(dfaStates: DFAState[], startKey: string, alphabet: string[]): { states: DFAState[]; startKey: string } {
+  const stateList = dfaStates;
+  const keyToIndex = new Map<string, number>();
+  stateList.forEach((s, i) => keyToIndex.set(s.key, i));
+
+  const accepting = new Set<number>();
+  const nonAccepting = new Set<number>();
+
+  for (let i = 0; i < stateList.length; i++) {
+    if (stateList[i].isAccepting) accepting.add(i);
+    else nonAccepting.add(i);
+  }
+
+  let P = [accepting, nonAccepting].filter(s => s.size > 0);
+  const W = [accepting, nonAccepting].filter(s => s.size > 0);
+
+  while (W.length > 0) {
+    const A = W.pop()!;
+    for (const c of alphabet) {
+      const X = new Set<number>();
+      for (let i = 0; i < stateList.length; i++) {
+        const targetKey = stateList[i].transitions.get(c);
+        if (targetKey !== undefined) {
+          const targetIndex = keyToIndex.get(targetKey);
+          if (targetIndex !== undefined && A.has(targetIndex)) {
+            X.add(i);
+          }
+        }
+      }
+
+      if (X.size === 0) continue;
+
+      const nextP: Set<number>[] = [];
+      for (const Y of P) {
+        const intersection = new Set<number>();
+        const difference = new Set<number>();
+        for (const y of Y) {
+          if (X.has(y)) intersection.add(y);
+          else difference.add(y);
+        }
+
+        if (intersection.size > 0 && difference.size > 0) {
+          nextP.push(intersection);
+          nextP.push(difference);
+
+          const wIndex = W.indexOf(Y);
+          if (wIndex !== -1) {
+            W.splice(wIndex, 1);
+            W.push(intersection);
+            W.push(difference);
+          } else {
+            if (intersection.size <= difference.size) W.push(intersection);
+            else W.push(difference);
+          }
+        } else {
+          nextP.push(Y);
+        }
+      }
+      P = nextP;
+    }
+  }
+
+  const oldToNew = new Map<number, number>();
+  P.forEach((partition, newIdx) => {
+    partition.forEach(oldIdx => oldToNew.set(oldIdx, newIdx));
+  });
+
+  // Identify if any partition is a pure trap state
+  let deadPartitionIndex = -1;
+  P.forEach((partition, idx) => {
+    const repIdx = Array.from(partition)[0];
+    const repState = stateList[repIdx];
+    if (!repState.isAccepting) {
+      let isTrap = true;
+      repState.transitions.forEach((targetKey) => {
+        const targetOldIdx = keyToIndex.get(targetKey)!;
+        const targetNewIdx = oldToNew.get(targetOldIdx)!;
+        if (targetNewIdx !== idx) isTrap = false;
+      });
+      if (isTrap) deadPartitionIndex = idx;
+    }
+  });
+
+  const minimizedStates: DFAState[] = [];
+  let newStartKey = '';
+
+  P.forEach((partition, newIdx) => {
+    const repIdx = Array.from(partition)[0];
+    const repState = stateList[repIdx];
+
+    let containsStart = false;
+    const nfaStates = new Set<number>();
+
+    partition.forEach(oldIdx => {
+      const s = stateList[oldIdx];
+      if (s.key === startKey) containsStart = true;
+      s.nfaStates.forEach(ns => nfaStates.add(ns));
+    });
+
+    const newKey = (newIdx === deadPartitionIndex) ? DEAD_KEY : `min_${newIdx}`;
+    if (containsStart) newStartKey = newKey;
+
+    const newTransitions = new Map<string, string>();
+    repState.transitions.forEach((targetKey, sym) => {
+      const targetOldIdx = keyToIndex.get(targetKey)!;
+      const targetNewIdx = oldToNew.get(targetOldIdx)!;
+      newTransitions.set(sym, targetNewIdx === deadPartitionIndex ? DEAD_KEY : `min_${targetNewIdx}`);
+    });
+
+    minimizedStates.push({
+      key: newKey,
+      nfaStates: [...nfaStates].sort((a, b) => a - b),
+      isAccepting: repState.isAccepting,
+      transitions: newTransitions
+    });
+  });
+
+  return { states: minimizedStates, startKey: newStartKey };
+}
+
+// =============================================================================
 // STEP 7 — BFS LAYOUT ENGINE
 // Places nodes in a left-to-right tree layout based on reachability depth.
 // =============================================================================
@@ -392,8 +516,11 @@ export function reToDfa(reString: string, alphabet: string[]): ReToDfaResult {
   // ── Subset Construction ───────────────────────────────────────────────────────
   const { states: dfaStates, startKey } = subsetConstruct(nfaOrErr, alphabet);
 
+  // ── Minimisation ──────────────────────────────────────────────────────────────
+  const { states: minStates, startKey: minStartKey } = minimizeDFA(dfaStates, startKey, alphabet);
+
   // ── Layout ────────────────────────────────────────────────────────────────────
-  const positions = layoutDFA(dfaStates, startKey);
+  const positions = layoutDFA(minStates, minStartKey);
 
   // ── Build WorkflowNodes ───────────────────────────────────────────────────────
   const keyToNodeId = new Map<string, string>();
@@ -402,10 +529,10 @@ export function reToDfa(reString: string, alphabet: string[]): ReToDfaResult {
 
   // Ordered: start → normal intermediates → accepting states → dead/trap last
   const ordered: DFAState[] = [
-    ...dfaStates.filter(s => s.key === startKey),
-    ...dfaStates.filter(s => s.key !== startKey && s.key !== DEAD_KEY && !s.isAccepting),
-    ...dfaStates.filter(s => s.key !== startKey && s.key !== DEAD_KEY &&  s.isAccepting),
-    ...dfaStates.filter(s => s.key === DEAD_KEY),
+    ...minStates.filter(s => s.key === minStartKey),
+    ...minStates.filter(s => s.key !== minStartKey && s.key !== DEAD_KEY && !s.isAccepting),
+    ...minStates.filter(s => s.key !== minStartKey && s.key !== DEAD_KEY &&  s.isAccepting),
+    ...minStates.filter(s => s.key === DEAD_KEY),
   ];
 
   const acceptCount = ordered.filter(s => s.isAccepting).length;
@@ -415,7 +542,7 @@ export function reToDfa(reString: string, alphabet: string[]): ReToDfaResult {
     const nodeId = `dfa_${idx}`;
     keyToNodeId.set(state.key, nodeId);
 
-    const isStart     = state.key === startKey;
+    const isStart     = state.key === minStartKey;
     const isDead      = state.key === DEAD_KEY;
     const isAccepting = state.isAccepting;
 
@@ -462,7 +589,7 @@ export function reToDfa(reString: string, alphabet: string[]): ReToDfaResult {
 
   // ── Build WorkflowEdges ───────────────────────────────────────────────────────
   let edgeIdx = 0;
-  for (const state of dfaStates) {
+  for (const state of minStates) {
     const srcId = keyToNodeId.get(state.key);
     if (!srcId) continue;
 
