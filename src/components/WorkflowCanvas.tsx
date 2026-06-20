@@ -135,6 +135,9 @@ export default function WorkflowCanvas({
           placeholder="e.g. on_click, on_pay" 
           value={testSequence}
           onChange={(e) => onTestSequenceChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onExecute();
+          }}
           className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 outline-none focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-48"
         />
         <button 

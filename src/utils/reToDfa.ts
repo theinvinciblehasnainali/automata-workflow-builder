@@ -547,9 +547,15 @@ export function reToDfa(reString: string, alphabet: string[]): ReToDfaResult {
     const isAccepting = state.isAccepting;
 
     const mathType: WorkflowNode['data']['mathType'] =
+      (isStart && isAccepting) ? 'initial_accepting' :
       isStart      ? 'initial'   :
       isAccepting  ? 'accepting' :
       isDead       ? 'rejecting' : 'normal';
+
+    const type: WorkflowNode['data']['type'] =
+      isAccepting ? 'accept' :
+      isDead      ? 'reject' :
+      isStart     ? 'trigger' : 'action';
 
     // User-friendly label
     let userLabel: string;

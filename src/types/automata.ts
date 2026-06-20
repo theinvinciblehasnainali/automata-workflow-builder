@@ -7,7 +7,7 @@ export interface WorkflowNodeData {
   label: string;
   mathState: string;
   type: 'trigger' | 'action' | 'condition' | 'accept' | 'reject';
-  mathType: 'initial' | 'normal' | 'accepting' | 'rejecting';
+  mathType: 'initial' | 'normal' | 'accepting' | 'rejecting' | 'initial_accepting';
   description: string;
   parameters: Record<string, string>;
   viewMode: ViewMode;

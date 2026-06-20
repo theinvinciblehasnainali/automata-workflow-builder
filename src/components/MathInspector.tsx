@@ -113,6 +113,7 @@ export default function MathInspector({
                 className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400"
               >
                 <option value="initial">Initial (Start)</option>
+                <option value="initial_accepting">Initial/Accepting</option>
                 <option value="normal">Normal</option>
                 <option value="accepting">Accepting (F)</option>
                 <option value="rejecting">Rejecting / Trap</option>

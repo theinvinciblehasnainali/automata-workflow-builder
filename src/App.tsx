@@ -176,6 +176,56 @@ export default function App() {
     }
   }, [simState.status]);
 
+  // Global Event Listeners
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      if ((e.target as Element).closest('.context-menu-container')) return;
+      setContextMenu(null);
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setContextMenu(null);
+        setIsAddEventModalOpen(false);
+        setIsDeleteModalOpen(false);
+        setIsRenameModalOpen(false);
+        setEditingNodeId(null);
+        setPendingConnection(null);
+        setPendingReString(null);
+      }
+      
+      if (e.key === 'Enter') {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (selectedNodeId && !editingNodeId) {
+          setEditingNodeId(selectedNodeId);
+        }
+      }
+      
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        
+        if (selectedNodeId) {
+          // Re-implement the deletion logic locally to avoid stale closures, or rely on state.
+          // Since selectedNodeId is in the dependency array, we can just call it.
+          // Note: handleDeleteNode uses state setters which don't need to be in deps.
+          setNodes(prev => prev.filter(n => n.id !== selectedNodeId));
+          setEdges(prev => prev.filter(edge => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
+          toast.success('State deleted via keyboard.');
+          if (editingNodeId === selectedNodeId) setEditingNodeId(null);
+          setContextMenu(null);
+          setSelectedNodeId(null);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [selectedNodeId, editingNodeId]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as unknown as WorkflowNode[]),
     []
@@ -1088,7 +1138,7 @@ export default function App() {
       {/* Context Menu Overlay */}
       {contextMenu && (
         <div 
-          className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg py-1 w-48 text-sm"
+          className="context-menu-container fixed z-50 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           {contextMenu.type !== 'canvas' && (

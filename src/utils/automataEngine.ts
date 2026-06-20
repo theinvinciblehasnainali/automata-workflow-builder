@@ -1,7 +1,7 @@
 import { WorkflowNode, WorkflowEdge, EventType } from '../types/automata';
 
 export const getInitialStateId = (nodes: WorkflowNode[]): string | null => {
-  const initialNode = nodes.find(n => n.data.mathType === 'initial');
+  const initialNode = nodes.find(n => n.data.mathType === 'initial' || n.data.mathType === 'initial_accepting');
   return initialNode?.id || nodes[0]?.id || null;
 };
 
@@ -47,7 +47,7 @@ export const evaluateSequence = (
   }
   
   const finalNode = nodes.find(n => n.id === currentState);
-  const isAccepted = finalNode?.data.mathType === 'accepting';
+  const isAccepted = finalNode?.data.mathType === 'accepting' || finalNode?.data.mathType === 'initial_accepting';
   
   return { finalState: currentState, isAccepted, pathTaken };
 };

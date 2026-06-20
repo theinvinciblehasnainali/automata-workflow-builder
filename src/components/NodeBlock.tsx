@@ -14,7 +14,7 @@ import {
 export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; selected: boolean }) {
   const getIcon = (type: WorkflowNodeData['type'], mathType: WorkflowNodeData['mathType'], active: boolean) => {
     const size = 16;
-    if (mathType === 'accepting') {
+    if (mathType === 'accepting' || mathType === 'initial_accepting') {
       return <CheckCircle2 size={size} className={active ? "text-emerald-600 dark:text-emerald-400 animate-pulse" : "text-emerald-500 dark:text-emerald-400"} />;
     }
     if (mathType === 'rejecting') {
@@ -38,7 +38,7 @@ export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; 
   let shadowClass = 'shadow-md';
   let ringClass = 'ring-0';
 
-  if (data.mathType === 'accepting') {
+  if (data.mathType === 'accepting' || data.mathType === 'initial_accepting') {
     borderClass = 'border-2 border-dashed border-emerald-500 dark:border-emerald-600';
     badgeBg = 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700';
     cardBg = 'bg-emerald-50/80 dark:bg-emerald-900/20';
@@ -64,7 +64,7 @@ export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; 
 
   if (isActive) {
     ringClass = 'ring-4 ring-offset-2 dark:ring-offset-slate-900';
-    if (data.mathType === 'accepting') { ringClass += ' ring-emerald-400 dark:ring-emerald-500'; cardBg = 'bg-emerald-100/95 dark:bg-emerald-900/40'; shadowClass = 'shadow-2xl shadow-emerald-200 dark:shadow-emerald-900/50'; }
+    if (data.mathType === 'accepting' || data.mathType === 'initial_accepting') { ringClass += ' ring-emerald-400 dark:ring-emerald-500'; cardBg = 'bg-emerald-100/95 dark:bg-emerald-900/40'; shadowClass = 'shadow-2xl shadow-emerald-200 dark:shadow-emerald-900/50'; }
     else if (data.mathType === 'rejecting') { ringClass += ' ring-rose-400 dark:ring-rose-500'; cardBg = 'bg-rose-100/95 dark:bg-rose-900/40'; shadowClass = 'shadow-2xl shadow-rose-200 dark:shadow-rose-900/50'; }
     else if (data.mathType === 'initial' || data.type === 'trigger') { ringClass += ' ring-emerald-400 dark:ring-emerald-500 animate-pulse'; shadowClass = 'shadow-2xl shadow-emerald-200 dark:shadow-emerald-900/50'; }
     else if (data.type === 'action') { ringClass += ' ring-indigo-400 dark:ring-indigo-500 animate-pulse'; shadowClass = 'shadow-2xl shadow-indigo-200 dark:shadow-indigo-900/50'; }
@@ -103,10 +103,10 @@ export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; 
           {isActive && (
             <span className="flex h-1.5 w-1.5 relative">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                data.mathType === 'accepting' ? 'bg-emerald-400 dark:bg-emerald-500' : data.mathType === 'rejecting' ? 'bg-rose-400 dark:bg-rose-500' : 'bg-indigo-400 dark:bg-indigo-500'
+                (data.mathType === 'accepting' || data.mathType === 'initial_accepting') ? 'bg-emerald-400 dark:bg-emerald-500' : data.mathType === 'rejecting' ? 'bg-rose-400 dark:bg-rose-500' : 'bg-indigo-400 dark:bg-indigo-500'
               }`}></span>
               <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                data.mathType === 'accepting' ? 'bg-emerald-500 dark:bg-emerald-400' : data.mathType === 'rejecting' ? 'bg-rose-500 dark:bg-rose-400' : 'bg-indigo-500 dark:bg-indigo-400'
+                (data.mathType === 'accepting' || data.mathType === 'initial_accepting') ? 'bg-emerald-500 dark:bg-emerald-400' : data.mathType === 'rejecting' ? 'bg-rose-500 dark:bg-rose-400' : 'bg-indigo-500 dark:bg-indigo-400'
               }`}></span>
             </span>
           )}
@@ -130,13 +130,13 @@ export default function NodeBlock({ data, selected }: { data: WorkflowNodeData; 
         </p>
       )}
 
-      {data.mathType === 'initial' && (
+      {(data.mathType === 'initial' || data.mathType === 'initial_accepting') && (
         <span className="absolute -left-3 -top-3 bg-emerald-100 dark:bg-emerald-900 border border-emerald-300 dark:border-emerald-700 px-1 py-0.5 rounded text-[8px] font-mono text-emerald-700 dark:text-emerald-300 font-bold tracking-tighter uppercase whitespace-nowrap shadow-sm">
           ▶ Start
         </span>
       )}
       
-      {data.mathType === 'accepting' && (
+      {(data.mathType === 'accepting' || data.mathType === 'initial_accepting') && (
         <div className="absolute -inset-1 rounded-xl border border-dashed border-emerald-400 dark:border-emerald-600 pointer-events-none opacity-60" />
       )}
     </div>
