@@ -548,7 +548,7 @@ export default function App() {
     setEdges(eds => eds.map(e => ({ ...e, data: { ...e.data, isActive: false } })));
     setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, isActive: false } })));
     
-    const initialNode = freshNodes.find(n => n.data.mathType === 'initial') || freshNodes[0];
+    const initialNode = freshNodes.find(n => n.data.mathType === 'initial' || n.data.mathType === 'initial_accepting') || freshNodes[0];
     if (!initialNode) {
       toast.error("Please ensure at least one initial state exists.");
       return;
@@ -571,7 +571,7 @@ export default function App() {
         const finalMatch = freshNodes.find(n => n.id === currentStateString);
         setSimState(prev => ({
           ...prev,
-          status: finalMatch?.data.mathType === 'accepting' ? 'accepted' : 'rejected'
+          status: (finalMatch?.data.mathType === 'accepting' || finalMatch?.data.mathType === 'initial_accepting') ? 'accepted' : 'rejected'
         }));
         setNodes(nds => nds.map(n => ({
           ...n,
@@ -1026,6 +1026,7 @@ export default function App() {
                   className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-xs font-bold focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none"
                 >
                   <option value="initial">Initial (Start)</option>
+                  <option value="initial_accepting">Initial/Accepting</option>
                   <option value="normal">Normal Transition</option>
                   <option value="accepting">Accepting Success (F)</option>
                   <option value="rejecting">Rejecting / Trap</option>

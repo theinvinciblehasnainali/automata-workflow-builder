@@ -22,8 +22,8 @@ export default function MathInspector({
   onRemoveEdge
 }: MathInspectorProps) {
   
-  const getInitialStates = () => nodes.filter(n => n.data.mathType === 'initial');
-  const getAcceptingStates = () => nodes.filter(n => n.data.mathType === 'accepting');
+  const getInitialStates = () => nodes.filter(n => n.data.mathType === 'initial' || n.data.mathType === 'initial_accepting');
+  const getAcceptingStates = () => nodes.filter(n => n.data.mathType === 'accepting' || n.data.mathType === 'initial_accepting');
 
   return (
     <div className="flex flex-col gap-4">
